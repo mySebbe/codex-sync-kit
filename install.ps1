@@ -20,7 +20,7 @@ $zipPath = Join-Path $env:TEMP "codex-sync-kit-$Ref.zip"
 $extractRoot = Join-Path $env:TEMP "codex-sync-kit-install"
 
 Step "Checking required tools"
-foreach ($tool in @("python", "git", "gh")) {
+foreach ($tool in @("python", "git", "gh", "codex")) {
   if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
     throw "Missing required tool: $tool"
   }
@@ -59,11 +59,12 @@ Set-Content -Path $cmdPath -Value $script -Encoding ASCII
 Step "Installing Codex plugin source"
 & $python -m codex_sync_kit plugin install --source (Join-Path $appRoot "plugin\codex-sync-kit")
 
+Step "Registering Codex plugin"
+& codex plugin add codex-sync-kit@personal
+
 Write-Host ""
 Write-Host "Installed Codex Sync Kit."
 Write-Host "Add this to PATH for the current shell:"
 Write-Host "  `$env:Path = `"$binRoot;`$env:Path`""
-Write-Host "Then enable the plugin:"
-Write-Host "  codex plugin add codex-sync-kit@personal"
 Write-Host "Initialize your private vault:"
 Write-Host "  codex-sync init --provider github --owner mySebbe --vault codex-sync-vault"
