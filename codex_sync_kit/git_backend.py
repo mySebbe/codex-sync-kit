@@ -94,11 +94,22 @@ def commit_and_push(vault_dir: Path, message: str) -> bool:
         return False
     ensure_local_git_identity(vault_dir)
     run(["git", "commit", "-m", message], cwd=vault_dir)
-    run(["git", "push"], cwd=vault_dir)
+    upstream = run(
+        ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+        cwd=vault_dir,
+        check=False,
+    )
+    if upstream.returncode == 0 and upstream.stdout.strip():
+        run(["git", "push"], cwd=vault_dir)
+    else:
+        run(["git", "push", "-u", "origin", "HEAD:main"], cwd=vault_dir)
     return True
 
 
 def init_vault_repo_if_empty(vault_dir: Path) -> None:
+    head = run(["git", "rev-parse", "--verify", "HEAD"], cwd=vault_dir, check=False)
+    if head.returncode != 0:
+        run(["git", "checkout", "-B", "main"], cwd=vault_dir)
     readme = vault_dir / "README.md"
     gitignore = vault_dir / ".gitignore"
     if not readme.exists():
