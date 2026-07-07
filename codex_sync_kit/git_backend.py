@@ -75,6 +75,7 @@ def ensure_clone(config: AppConfig) -> Path:
     vault_dir = config.resolved_vault_dir
     vault_dir.parent.mkdir(parents=True, exist_ok=True)
     if (vault_dir / ".git").exists():
+        ensure_vault_remote_matches(vault_dir, config)
         run(["git", "fetch", "--prune"], cwd=vault_dir)
         run(["git", "pull", "--ff-only"], cwd=vault_dir, check=False)
         return vault_dir
@@ -84,7 +85,19 @@ def ensure_clone(config: AppConfig) -> Path:
     if vault_dir.exists():
         vault_dir.rmdir()
     run(["gh", "repo", "clone", config.repo, str(vault_dir)])
+    ensure_vault_remote_matches(vault_dir, config)
     return vault_dir
+
+
+def ensure_vault_remote_matches(vault_dir: Path, config: AppConfig) -> None:
+    view = run(["gh", "repo", "view", "--json", "nameWithOwner"], cwd=vault_dir, check=False)
+    if view.returncode != 0:
+        raise CommandError(view)
+    actual = json.loads(view.stdout).get("nameWithOwner")
+    if actual != config.repo:
+        raise RuntimeError(
+            f"Vault directory points at {actual}, expected {config.repo}: {vault_dir}"
+        )
 
 
 def commit_and_push(vault_dir: Path, message: str) -> bool:

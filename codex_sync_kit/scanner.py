@@ -37,11 +37,36 @@ def scan(
     if not codex_home.exists():
         raise FileNotFoundError(f"Codex home does not exist: {codex_home}")
 
+    root = codex_home.resolve()
     items: list[ScanItem] = []
     for path in sorted(codex_home.rglob("*")):
+        rel = normalize_relative(path, codex_home)
+        if path.is_symlink():
+            items.append(
+                ScanItem(
+                    relative_path=rel,
+                    absolute_path=path,
+                    size=path.lstat().st_size,
+                    allowed=False,
+                    risky=True,
+                    reason="excluded-symlink",
+                )
+            )
+            continue
         if not path.is_file():
             continue
-        rel = normalize_relative(path, codex_home)
+        if not path.resolve().is_relative_to(root):
+            items.append(
+                ScanItem(
+                    relative_path=rel,
+                    absolute_path=path,
+                    size=path.stat().st_size,
+                    allowed=False,
+                    risky=True,
+                    reason="excluded-path-escape",
+                )
+            )
+            continue
         item_profile = profile
         classification = classify(rel, item_profile, include_risky=include_risky)
         allowed = classification.allowed

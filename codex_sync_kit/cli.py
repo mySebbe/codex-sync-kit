@@ -171,7 +171,12 @@ def cmd_push(args: argparse.Namespace) -> int:
 
 def cmd_pull(args: argparse.Namespace) -> int:
     config = load_config()
-    vault = ensure_clone(config)
+    if args.dry_run and not config.resolved_vault_dir.exists():
+        ensure_private_repo(config, create=False)
+        print(f"Vault repo is reachable: {config.repo}")
+        print(f"Local vault is not cloned yet: {config.resolved_vault_dir}")
+        return 0
+    vault = config.resolved_vault_dir if args.dry_run else ensure_clone(config)
     snapshots = list_snapshots(vault)
     print(f"Vault: {vault}")
     print(f"Snapshots: {len(snapshots)}")
@@ -183,7 +188,8 @@ def cmd_pull(args: argparse.Namespace) -> int:
 def cmd_restore(args: argparse.Namespace) -> int:
     config = load_config()
     vault = ensure_clone(config)
-    snapshot = args.snapshot or latest_snapshot(vault)
+    snapshot = None if args.snapshot == "latest" else args.snapshot
+    snapshot = snapshot or latest_snapshot(vault)
     if not snapshot:
         raise RuntimeError("No snapshot available.")
     codex_home = resolve_codex_home(config, args.codex_home)

@@ -87,15 +87,84 @@ def _toml_string_array(values: tuple[str, ...]) -> str:
     return "[" + ", ".join(f'"{_escape(value)}"' for value in values) + "]"
 
 
-_SECRET_RE = re.compile(r"(token|secret|password|passwd|api[_-]?key|bearer)", re.IGNORECASE)
+_SECRET_RE = re.compile(
+    r"(token|secret|password|passwd|api[_-]?key|bearer|authorization|credential)",
+    re.IGNORECASE,
+)
+_SECRET_VALUE_RE = re.compile(
+    r"(Bearer\s+\S+|sk-[A-Za-z0-9_-]+|gh[opsu]_[A-Za-z0-9_]+|xox[baprs]-\S+)",
+    re.IGNORECASE,
+)
 
 
 def redact_config_text(text: str) -> str:
+    try:
+        data = tomllib.loads(text)
+    except tomllib.TOMLDecodeError:
+        return _redact_config_lines(text)
+    redacted = _redact_toml_value("", data)
+    if isinstance(redacted, dict):
+        return _dump_toml(redacted)
+    return ""
+
+
+def _redact_config_lines(text: str) -> str:
     redacted: list[str] = []
     for line in text.splitlines():
         key = line.split("=", 1)[0].strip() if "=" in line else line
-        if "=" in line and _SECRET_RE.search(key):
+        if "=" in line and (_SECRET_RE.search(key) or _SECRET_VALUE_RE.search(line)):
             redacted.append(f"{key} = \"<redacted>\"")
         else:
             redacted.append(line)
     return "\n".join(redacted) + ("\n" if text.endswith("\n") else "")
+
+
+def _redact_toml_value(key: str, value: Any) -> Any:
+    if _SECRET_RE.search(key):
+        return "<redacted>"
+    if isinstance(value, dict):
+        return {
+            str(child_key): _redact_toml_value(str(child_key), child)
+            for child_key, child in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_toml_value(key, item) for item in value]
+    if isinstance(value, str) and _SECRET_VALUE_RE.search(value):
+        return "<redacted>"
+    return value
+
+
+def _dump_toml(data: dict[str, Any]) -> str:
+    lines: list[str] = []
+    scalar_items = {key: value for key, value in data.items() if not isinstance(value, dict)}
+    section_items = {key: value for key, value in data.items() if isinstance(value, dict)}
+    for key, value in scalar_items.items():
+        lines.append(f"{key} = {_format_toml_value(value)}")
+    for key, value in section_items.items():
+        if lines:
+            lines.append("")
+        _dump_toml_section(lines, [key], value)
+    return "\n".join(lines) + "\n"
+
+
+def _dump_toml_section(lines: list[str], prefix: list[str], data: dict[str, Any]) -> None:
+    lines.append(f"[{'.'.join(prefix)}]")
+    nested: dict[str, dict[str, Any]] = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            nested[key] = value
+        else:
+            lines.append(f"{key} = {_format_toml_value(value)}")
+    for key, value in nested.items():
+        lines.append("")
+        _dump_toml_section(lines, [*prefix, key], value)
+
+
+def _format_toml_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int | float):
+        return str(value)
+    if isinstance(value, list):
+        return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
+    return f'"{_escape(str(value))}"'

@@ -1,5 +1,8 @@
+import json
 from datetime import UTC, datetime
 from pathlib import Path
+
+import pytest
 
 from codex_sync_kit.restore import restore_snapshot
 from codex_sync_kit.scanner import scan, selected_items
@@ -46,3 +49,42 @@ def test_scan_snapshot_and_restore_sanitizes_config(tmp_path: Path) -> None:
 
     assert "AGENTS.md" in planned
     assert (target / "AGENTS.md").read_text(encoding="utf-8").startswith("Use real")
+
+
+def test_scan_excludes_symlink_files(tmp_path: Path) -> None:
+    codex_home = tmp_path / ".codex"
+    codex_home.mkdir()
+    outside = tmp_path / "outside-secret.txt"
+    outside.write_text("secret", encoding="utf-8")
+    skills = codex_home / "skills"
+    skills.mkdir()
+    link = skills / "linked.md"
+    try:
+        link.symlink_to(outside)
+    except OSError:
+        pytest.skip("Symlink creation is not available in this environment.")
+
+    items = scan(codex_home, profile="safe")
+
+    linked = next(item for item in items if item.relative_path == "skills/linked.md")
+    assert not linked.allowed
+    assert linked.reason == "excluded-symlink"
+
+
+def test_restore_rejects_blocked_manifest_paths(tmp_path: Path) -> None:
+    snapshot = tmp_path / "vault" / "snapshots" / "s1"
+    files = snapshot / "files"
+    files.mkdir(parents=True)
+    (files / "auth.json").write_text("{}", encoding="utf-8")
+    (snapshot / "manifest.json").write_text(
+        json.dumps({"files": [{"relative_path": "auth.json"}]}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="blocked restore path"):
+        restore_snapshot(
+            vault_root=tmp_path / "vault",
+            snapshot="s1",
+            codex_home=tmp_path / ".codex",
+            apply=False,
+        )

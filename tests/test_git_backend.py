@@ -8,6 +8,7 @@ from codex_sync_kit.git_backend import (
     commit_and_push,
     ensure_local_git_identity,
     ensure_private_repo,
+    ensure_vault_remote_matches,
     init_vault_repo_if_empty,
 )
 
@@ -22,6 +23,19 @@ def test_existing_public_vault_is_rejected(monkeypatch: pytest.MonkeyPatch) -> N
 
     with pytest.raises(RuntimeError, match="must be private"):
         ensure_private_repo(AppConfig(owner="me", vault="vault"))
+
+
+def test_existing_vault_remote_mismatch_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    def fake_run(args: list[str], *, cwd=None, check: bool = True) -> CommandResult:
+        return CommandResult(tuple(args), 0, '{"nameWithOwner":"other/repo"}', "")
+
+    monkeypatch.setattr("codex_sync_kit.git_backend.run", fake_run)
+
+    with pytest.raises(RuntimeError, match="expected me/vault"):
+        ensure_vault_remote_matches(tmp_path, AppConfig(owner="me", vault="vault"))
 
 
 def test_missing_git_identity_sets_github_noreply(

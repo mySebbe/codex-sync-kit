@@ -28,3 +28,18 @@ def test_redact_config_text_keeps_non_secret_values() -> None:
     assert 'TOKEN = "<redacted>"' in redacted
     assert "abc" not in redacted
     assert "def" not in redacted
+
+
+def test_redact_config_text_redacts_inline_toml_secrets() -> None:
+    text = (
+        'model = "gpt-5"\n'
+        'env = { OPENAI_API_KEY = "sk-test123", SAFE_VALUE = "kept" }\n'
+        'headers = { Authorization = "Bearer abc123" }\n'
+    )
+
+    redacted = redact_config_text(text)
+
+    assert "sk-test123" not in redacted
+    assert "Bearer abc123" not in redacted
+    assert "SAFE_VALUE" in redacted
+    assert "kept" in redacted

@@ -1,6 +1,6 @@
 {
   "name": "codex-sync-kit",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Sync selected Codex setup files to a private GitHub vault and restore them on fresh installs.",
   "author": {
     "name": "Sebastian Albrecht",
@@ -17,12 +17,12 @@
     "longDescription": "Install a local CLI and Codex skill for scanning, snapshotting, pushing, pulling, and restoring selected Codex setup files.",
     "developerName": "Sebastian Albrecht",
     "category": "Productivity",
-    "capabilities": ["Write", "Automation"],
+    "capabilities": ["Interactive"],
     "websiteURL": "https://github.com/mySebbe/codex-sync-kit",
     "defaultPrompt": [
       "Use $codex-sync to scan my Codex setup.",
-      "Use $codex-sync to push a safe Codex snapshot.",
-      "Use $codex-sync to restore my latest Codex snapshot."
+      "Use $codex-sync to initialize my private vault.",
+      "Use $codex-sync to list my available snapshots."
     ],
     "brandColor": "#2563EB"
   }

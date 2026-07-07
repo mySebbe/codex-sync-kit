@@ -31,8 +31,11 @@ def create_snapshot(
         shutil.rmtree(snapshot_root)
     files_root.mkdir(parents=True, exist_ok=True)
 
+    root = codex_home.resolve()
     copied: list[dict[str, object]] = []
     for item in items:
+        if item.absolute_path.is_symlink() or not item.absolute_path.resolve().is_relative_to(root):
+            raise RuntimeError(f"Refusing to snapshot unsafe path: {item.relative_path}")
         destination = files_root / item.relative_path
         destination.parent.mkdir(parents=True, exist_ok=True)
         if item.relative_path == "config.toml":

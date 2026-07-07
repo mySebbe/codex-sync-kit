@@ -11,6 +11,10 @@ def test_safe_profile_selects_agents_and_sanitized_config() -> None:
 def test_auth_and_live_state_are_blocked_even_when_risky_enabled() -> None:
     assert not classify("auth.json", "full", include_risky=True).allowed
     assert not classify("logs_2.sqlite-wal", "full", include_risky=True).allowed
+    assert not classify("credentials.json", "full", include_risky=True).allowed
+    assert not classify("service_account.json", "full", include_risky=True).allowed
+    assert not classify(".env.local", "full", include_risky=True).allowed
+    assert not classify("certs/signing.p12", "full", include_risky=True).allowed
 
 
 def test_full_profile_requires_confirmation_for_risky_files() -> None:

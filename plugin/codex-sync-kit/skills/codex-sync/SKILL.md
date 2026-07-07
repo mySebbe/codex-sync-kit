@@ -5,7 +5,7 @@ description: Use when the user wants to sync, back up, inspect, or restore their
 
 # Codex Sync
 
-Use the local `codex-sync` CLI. Prefer `safe` until the user explicitly asks for broader coverage.
+Use the local `codex-sync` CLI. Prefer `safe` until the user explicitly asks for broader coverage. Review scan output before push or restore actions.
 
 ## Common flows
 
@@ -24,6 +24,7 @@ codex-sync init --provider github --owner mySebbe --vault codex-sync-vault
 Push a safe snapshot:
 
 ```powershell
+codex-sync scan --profile safe
 codex-sync push --profile safe
 ```
 
@@ -39,7 +40,7 @@ Restore without copying first:
 codex-sync restore
 ```
 
-Restore for real:
+Restore for real only after the dry-run output is reviewed and the user explicitly asks to apply it:
 
 ```powershell
 codex-sync restore --apply
