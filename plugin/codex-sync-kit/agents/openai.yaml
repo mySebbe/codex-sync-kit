@@ -1,0 +1,7 @@
+interface:
+  display_name: "Codex Sync Kit"
+  short_description: "Sync Codex setup to a private vault"
+  brand_color: "#2563EB"
+  default_prompt: "Use $codex-sync to scan my Codex setup and push a safe snapshot."
+policy:
+  allow_implicit_invocation: true

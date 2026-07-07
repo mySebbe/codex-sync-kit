@@ -1,0 +1,29 @@
+{
+  "name": "codex-sync-kit",
+  "version": "0.1.0",
+  "description": "Sync selected Codex setup files to a private GitHub vault and restore them on fresh installs.",
+  "author": {
+    "name": "Sebastian Albrecht",
+    "url": "https://github.com/mySebbe"
+  },
+  "homepage": "https://github.com/mySebbe/codex-sync-kit",
+  "repository": "https://github.com/mySebbe/codex-sync-kit",
+  "license": "MIT",
+  "keywords": ["codex", "sync", "github", "backup"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Sync Kit",
+    "shortDescription": "Sync Codex setup through a private GitHub vault.",
+    "longDescription": "Install a local CLI and Codex skill for scanning, snapshotting, pushing, pulling, and restoring selected Codex setup files.",
+    "developerName": "Sebastian Albrecht",
+    "category": "Productivity",
+    "capabilities": ["Write", "Automation"],
+    "websiteURL": "https://github.com/mySebbe/codex-sync-kit",
+    "defaultPrompt": [
+      "Use $codex-sync to scan my Codex setup.",
+      "Use $codex-sync to push a safe Codex snapshot.",
+      "Use $codex-sync to restore my latest Codex snapshot."
+    ],
+    "brandColor": "#2563EB"
+  }
+}
