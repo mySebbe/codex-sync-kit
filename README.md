@@ -7,10 +7,10 @@ The first release focuses on GitHub private repositories. OneDrive and folder ba
 ## 1-Click Install
 
 ```powershell
-irm https://raw.githubusercontent.com/mySebbe/codex-sync-kit/main/install.ps1 | iex
+irm https://github.com/mySebbe/codex-sync-kit/releases/download/v0.1.7/install.ps1 | iex
 ```
 
-The installer creates a local Python virtual environment, installs `codex-sync-kit`, installs the Codex plugin source, and registers the plugin with Codex.
+The installer creates a local Python virtual environment, installs `codex-sync-kit`, installs the Codex plugin source, and registers the plugin with Codex. By default it installs from the pinned `v0.1.7` release tag rather than a mutable branch.
 
 ## Quick Start
 

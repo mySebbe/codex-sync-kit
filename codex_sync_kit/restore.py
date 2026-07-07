@@ -43,6 +43,7 @@ def restore_snapshot(
             target.parent.mkdir(parents=True, exist_ok=True)
             if not target.parent.resolve().is_relative_to(codex_home.resolve()):
                 raise RuntimeError(f"Restore target escapes Codex home: {relative_text}")
+            _ensure_safe_restore_target(codex_home, target, relative_text)
             _backup_existing(target)
             shutil.copy2(source, target)
     return planned
@@ -54,6 +55,19 @@ def _backup_existing(target: Path) -> None:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     backup = target.with_name(f"{target.name}.codex-sync-backup-{stamp}")
     shutil.copy2(target, backup)
+
+
+def _ensure_safe_restore_target(root: Path, target: Path, relative_text: str) -> None:
+    resolved_root = root.resolve()
+    if target.is_symlink():
+        raise RuntimeError(f"Restore target is a symlink: {relative_text}")
+    if target.exists():
+        if not target.resolve().is_relative_to(resolved_root):
+            raise RuntimeError(f"Restore target escapes Codex home: {relative_text}")
+        if not target.is_file():
+            raise RuntimeError(f"Restore target is not a regular file: {relative_text}")
+        if target.stat().st_nlink > 1:
+            raise RuntimeError(f"Restore target is hard-linked: {relative_text}")
 
 
 def _safe_child(root: Path, relative_text: str) -> Path:

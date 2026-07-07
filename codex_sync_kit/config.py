@@ -89,11 +89,13 @@ def _toml_string_array(values: tuple[str, ...]) -> str:
 
 _BARE_TOML_KEY_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 _SECRET_RE = re.compile(
-    r"(token|secret|password|passwd|api[_-]?key|bearer|authorization|credential)",
+    r"(^|[_\-.])(pat|token|secret|password|passwd|bearer|authorization|credential)"
+    r"([_\-.]|$)|api[_-]?key|client[_-]?secret",
     re.IGNORECASE,
 )
 _SECRET_VALUE_RE = re.compile(
-    r"(Bearer\s+\S+|sk-[A-Za-z0-9_-]+|gh[opsu]_[A-Za-z0-9_]+|xox[baprs]-\S+)",
+    r"(Bearer\s+\S+|sk-[A-Za-z0-9_-]+|github_pat_[A-Za-z0-9_]+|"
+    r"gh[opsu]_[A-Za-z0-9_]+|xox[baprs]-\S+)",
     re.IGNORECASE,
 )
 

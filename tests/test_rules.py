@@ -15,6 +15,10 @@ def test_auth_and_live_state_are_blocked_even_when_risky_enabled() -> None:
     assert not classify("service_account.json", "full", include_risky=True).allowed
     assert not classify(".env.local", "full", include_risky=True).allowed
     assert not classify("certs/signing.p12", "full", include_risky=True).allowed
+    assert not classify(".env", "full", include_risky=True).allowed
+    assert not classify("token.txt", "full", include_risky=True).allowed
+    assert not classify("secret.txt", "full", include_risky=True).allowed
+    assert not classify("password.txt", "full", include_risky=True).allowed
 
 
 def test_full_profile_requires_confirmation_for_risky_files() -> None:

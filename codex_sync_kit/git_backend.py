@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
+import subprocess  # nosec B404
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -31,7 +31,8 @@ def require_tools() -> None:
 
 
 def run(args: list[str], *, cwd: Path | None = None, check: bool = True) -> CommandResult:
-    proc = subprocess.run(
+    # Callers pass explicit git/gh argument lists, never shell strings.
+    proc = subprocess.run(  # nosec B603
         args,
         cwd=cwd,
         text=True,
@@ -107,15 +108,7 @@ def commit_and_push(vault_dir: Path, message: str) -> bool:
         return False
     ensure_local_git_identity(vault_dir)
     run(["git", "commit", "-m", message], cwd=vault_dir)
-    upstream = run(
-        ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
-        cwd=vault_dir,
-        check=False,
-    )
-    if upstream.returncode == 0 and upstream.stdout.strip():
-        run(["git", "push"], cwd=vault_dir)
-    else:
-        run(["git", "push", "-u", "origin", "HEAD:main"], cwd=vault_dir)
+    run(["git", "push", "-u", "origin", "HEAD:main"], cwd=vault_dir)
     return True
 
 

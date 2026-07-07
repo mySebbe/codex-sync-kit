@@ -88,3 +88,33 @@ def test_restore_rejects_blocked_manifest_paths(tmp_path: Path) -> None:
             codex_home=tmp_path / ".codex",
             apply=False,
         )
+
+
+def test_restore_refuses_existing_symlink_target(tmp_path: Path) -> None:
+    snapshot = tmp_path / "vault" / "snapshots" / "s1"
+    files = snapshot / "files"
+    files.mkdir(parents=True)
+    (files / "AGENTS.md").write_text("safe", encoding="utf-8")
+    (snapshot / "manifest.json").write_text(
+        json.dumps({"files": [{"relative_path": "AGENTS.md"}]}),
+        encoding="utf-8",
+    )
+    codex_home = tmp_path / ".codex"
+    codex_home.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_text("outside", encoding="utf-8")
+    target = codex_home / "AGENTS.md"
+    try:
+        target.symlink_to(outside)
+    except OSError:
+        pytest.skip("Symlink creation is not available in this environment.")
+
+    with pytest.raises(RuntimeError, match="symlink"):
+        restore_snapshot(
+            vault_root=tmp_path / "vault",
+            snapshot="s1",
+            codex_home=codex_home,
+            apply=True,
+        )
+
+    assert outside.read_text(encoding="utf-8") == "outside"

@@ -46,6 +46,21 @@ def test_redact_config_text_redacts_inline_toml_secrets() -> None:
     assert "kept" in redacted
 
 
+def test_redact_config_text_redacts_github_pat_values_and_pat_keys() -> None:
+    text = (
+        'model = "gpt-5"\n'
+        'pat = "github_pat_11ABCDE_sensitivevalue"\n'
+        'label = "github_pat_not_a_secret_but_token_shaped"\n'
+    )
+
+    redacted = redact_config_text(text)
+
+    assert "github_pat_11ABCDE_sensitivevalue" not in redacted
+    assert "github_pat_not_a_secret_but_token_shaped" not in redacted
+    assert 'pat = "<redacted>"' in redacted
+    assert 'label = "<redacted>"' in redacted
+
+
 def test_redact_config_text_keeps_path_keys_parseable() -> None:
     text = """
 [projects.'c:\\users\\me\\wieviel-tokens-hab-ich']

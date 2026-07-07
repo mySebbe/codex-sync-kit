@@ -78,7 +78,10 @@ def test_empty_vault_switches_to_main(monkeypatch: pytest.MonkeyPatch, tmp_path:
     assert ("git", "checkout", "-B", "main") in calls
 
 
-def test_first_vault_push_sets_upstream(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_vault_push_always_targets_origin_main(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     (tmp_path / "README.md").write_text("x", encoding="utf-8")
     calls: list[tuple[str, ...]] = []
 
@@ -88,11 +91,10 @@ def test_first_vault_push_sets_upstream(monkeypatch: pytest.MonkeyPatch, tmp_pat
             return CommandResult(tuple(args), 0, " M README.md\n", "")
         if args == ["git", "config", "user.email"]:
             return CommandResult(tuple(args), 0, "me@example.com\n", "")
-        if args == ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"]:
-            return CommandResult(tuple(args), 128, "", "no upstream")
         return CommandResult(tuple(args), 0, "", "")
 
     monkeypatch.setattr("codex_sync_kit.git_backend.run", fake_run)
 
     assert commit_and_push(tmp_path, "test")
     assert ("git", "push", "-u", "origin", "HEAD:main") in calls
+    assert ("git", "push") not in calls

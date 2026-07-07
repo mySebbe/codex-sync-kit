@@ -1,6 +1,9 @@
 param(
   [string]$Repo = "mySebbe/codex-sync-kit",
-  [string]$Ref = "main",
+  [string]$Ref = "v0.1.7",
+  [ValidateSet("tag", "branch", "commit")]
+  [string]$RefType = "tag",
+  [string]$ExpectedSha256 = "",
   [switch]$DryRun
 )
 
@@ -15,8 +18,15 @@ $appRoot = Join-Path $localRoot "app"
 $venvRoot = Join-Path $localRoot ".venv"
 $binRoot = Join-Path $localRoot "bin"
 $cmdPath = Join-Path $binRoot "codex-sync.cmd"
-$zipUrl = "https://github.com/$Repo/archive/refs/heads/$Ref.zip"
-$zipPath = Join-Path $env:TEMP "codex-sync-kit-$Ref.zip"
+if ($RefType -eq "branch") {
+  $zipUrl = "https://github.com/$Repo/archive/refs/heads/$Ref.zip"
+} elseif ($RefType -eq "tag") {
+  $zipUrl = "https://github.com/$Repo/archive/refs/tags/$Ref.zip"
+} else {
+  $zipUrl = "https://github.com/$Repo/archive/$Ref.zip"
+}
+$safeRef = $Ref -replace '[^A-Za-z0-9_.-]', '-'
+$zipPath = Join-Path $env:TEMP "codex-sync-kit-$safeRef.zip"
 $extractRoot = Join-Path $env:TEMP "codex-sync-kit-install"
 
 Step "Checking required tools"
@@ -37,6 +47,12 @@ Step "Downloading source"
 Remove-Item -Recurse -Force $extractRoot -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null
 Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+if ($ExpectedSha256) {
+  $actualSha256 = (Get-FileHash -Algorithm SHA256 -Path $zipPath).Hash.ToLowerInvariant()
+  if ($actualSha256 -ne $ExpectedSha256.ToLowerInvariant()) {
+    throw "SHA256 mismatch for downloaded archive. Expected $ExpectedSha256, got $actualSha256"
+  }
+}
 Expand-Archive -Path $zipPath -DestinationPath $extractRoot -Force
 $sourceRoot = Get-ChildItem -Path $extractRoot -Directory | Select-Object -First 1
 
