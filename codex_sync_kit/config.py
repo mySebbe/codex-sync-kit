@@ -87,6 +87,7 @@ def _toml_string_array(values: tuple[str, ...]) -> str:
     return "[" + ", ".join(f'"{_escape(value)}"' for value in values) + "]"
 
 
+_BARE_TOML_KEY_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 _SECRET_RE = re.compile(
     r"(token|secret|password|passwd|api[_-]?key|bearer|authorization|credential)",
     re.IGNORECASE,
@@ -120,15 +121,17 @@ def _redact_config_lines(text: str) -> str:
 
 
 def _redact_toml_value(key: str, value: Any) -> Any:
-    if _SECRET_RE.search(key):
-        return "<redacted>"
     if isinstance(value, dict):
         return {
             str(child_key): _redact_toml_value(str(child_key), child)
             for child_key, child in value.items()
         }
     if isinstance(value, list):
+        if _SECRET_RE.search(key):
+            return "<redacted>"
         return [_redact_toml_value(key, item) for item in value]
+    if _SECRET_RE.search(key):
+        return "<redacted>"
     if isinstance(value, str) and _SECRET_VALUE_RE.search(value):
         return "<redacted>"
     return value
@@ -139,7 +142,7 @@ def _dump_toml(data: dict[str, Any]) -> str:
     scalar_items = {key: value for key, value in data.items() if not isinstance(value, dict)}
     section_items = {key: value for key, value in data.items() if isinstance(value, dict)}
     for key, value in scalar_items.items():
-        lines.append(f"{key} = {_format_toml_value(value)}")
+        lines.append(f"{_format_toml_key(key)} = {_format_toml_value(value)}")
     for key, value in section_items.items():
         if lines:
             lines.append("")
@@ -148,13 +151,13 @@ def _dump_toml(data: dict[str, Any]) -> str:
 
 
 def _dump_toml_section(lines: list[str], prefix: list[str], data: dict[str, Any]) -> None:
-    lines.append(f"[{'.'.join(prefix)}]")
+    lines.append(f"[{'.'.join(_format_toml_key(part) for part in prefix)}]")
     nested: dict[str, dict[str, Any]] = {}
     for key, value in data.items():
         if isinstance(value, dict):
             nested[key] = value
         else:
-            lines.append(f"{key} = {_format_toml_value(value)}")
+            lines.append(f"{_format_toml_key(key)} = {_format_toml_value(value)}")
     for key, value in nested.items():
         lines.append("")
         _dump_toml_section(lines, [*prefix, key], value)
@@ -168,3 +171,9 @@ def _format_toml_value(value: Any) -> str:
     if isinstance(value, list):
         return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
     return f'"{_escape(str(value))}"'
+
+
+def _format_toml_key(key: str) -> str:
+    if _BARE_TOML_KEY_RE.match(key):
+        return key
+    return f'"{_escape(key)}"'

@@ -1,3 +1,4 @@
+import tomllib
 from pathlib import Path
 
 from codex_sync_kit.config import AppConfig, load_config, redact_config_text, save_config
@@ -43,3 +44,19 @@ def test_redact_config_text_redacts_inline_toml_secrets() -> None:
     assert "Bearer abc123" not in redacted
     assert "SAFE_VALUE" in redacted
     assert "kept" in redacted
+
+
+def test_redact_config_text_keeps_path_keys_parseable() -> None:
+    text = """
+[projects.'c:\\users\\me\\wieviel-tokens-hab-ich']
+trust_level = "trusted"
+
+[plugins."github@openai-curated"]
+enabled = true
+"""
+
+    redacted = redact_config_text(text)
+    parsed = tomllib.loads(redacted)
+
+    assert parsed["projects"]["c:\\users\\me\\wieviel-tokens-hab-ich"]["trust_level"] == "trusted"
+    assert parsed["plugins"]["github@openai-curated"]["enabled"] is True
