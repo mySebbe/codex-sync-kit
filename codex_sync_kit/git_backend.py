@@ -92,6 +92,7 @@ def commit_and_push(vault_dir: Path, message: str) -> bool:
     status = run(["git", "status", "--porcelain"], cwd=vault_dir)
     if not status.stdout.strip():
         return False
+    ensure_local_git_identity(vault_dir)
     run(["git", "commit", "-m", message], cwd=vault_dir)
     run(["git", "push"], cwd=vault_dir)
     return True
@@ -107,3 +108,20 @@ def init_vault_repo_if_empty(vault_dir: Path) -> None:
         )
     if not gitignore.exists():
         gitignore.write_text(".DS_Store\nThumbs.db\n", encoding="utf-8")
+
+
+def ensure_local_git_identity(repo_dir: Path) -> None:
+    current_email = run(["git", "config", "user.email"], cwd=repo_dir, check=False)
+    if current_email.returncode == 0 and current_email.stdout.strip():
+        return
+
+    user_id = run(["gh", "api", "user", "--jq", ".id"], check=False).stdout.strip()
+    login = run(["gh", "api", "user", "--jq", ".login"], check=False).stdout.strip()
+    if user_id and login:
+        name = login
+        email = f"{user_id}+{login}@users.noreply.github.com"
+    else:
+        name = "Codex Sync Kit"
+        email = "codex-sync-kit@users.noreply.github.com"
+    run(["git", "config", "user.name", name], cwd=repo_dir)
+    run(["git", "config", "user.email", email], cwd=repo_dir)
