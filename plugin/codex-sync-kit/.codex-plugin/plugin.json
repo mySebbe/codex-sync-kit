@@ -1,6 +1,6 @@
 {
   "name": "codex-sync-kit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Sync selected Codex setup files to a private GitHub vault and restore them on fresh installs.",
   "author": {
     "name": "Sebastian Albrecht",

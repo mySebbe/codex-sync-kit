@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -50,6 +51,9 @@ def ensure_private_repo(config: AppConfig, *, create: bool = True) -> None:
         check=False,
     )
     if view.returncode == 0:
+        visibility = json.loads(view.stdout).get("visibility")
+        if visibility != "PRIVATE":
+            raise RuntimeError(f"Vault repo must be private, got {visibility}: {config.repo}")
         return
     if not create:
         raise CommandError(view)
