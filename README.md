@@ -19,8 +19,15 @@ codex-sync init --provider github --owner mySebbe --vault codex-sync-vault
 codex-sync scan --profile safe
 codex-sync push --profile safe
 codex-sync pull --dry-run
+codex-sync verify --snapshot latest --require-hashes
 codex-sync restore
 ```
+
+New snapshots use manifest schema v2 with a SHA-256 digest and copied size for every file.
+`codex-sync verify` checks the manifest, safe relative paths, exact file inventory, sizes, and
+hashes before restore. Legacy v1 snapshots remain readable; use `--require-hashes` when a CI or
+recovery workflow must reject legacy snapshots. Restore rejects legacy snapshots by default; use
+`restore --allow-legacy-unhashed` only for a reviewed v1 recovery snapshot.
 
 Use `--profile full --include-risky --confirm-risky "SYNC RISKY CODEX FILES"` only when you intentionally want to include risky local files. Auth files, live SQLite databases, WAL/SHM files, caches, logs, and obvious secret files stay blocked.
 
