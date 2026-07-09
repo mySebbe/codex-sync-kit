@@ -34,6 +34,12 @@ Inspect available snapshots:
 codex-sync pull --dry-run
 ```
 
+Verify the latest snapshot's inventory and SHA-256 hashes before restore:
+
+```powershell
+codex-sync verify --snapshot latest --require-hashes
+```
+
 Restore without copying first:
 
 ```powershell
@@ -45,6 +51,10 @@ Restore for real only after the dry-run output is reviewed and the user explicit
 ```powershell
 codex-sync restore --apply
 ```
+
+Legacy v1 snapshots have no per-file hashes and are rejected by default. Use
+`--allow-legacy-unhashed` only when the user explicitly accepts that risk after reviewing the
+snapshot and vault history.
 
 ## Risky full sync
 

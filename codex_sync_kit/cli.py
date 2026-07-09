@@ -4,6 +4,7 @@ import argparse
 import json
 import shutil
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
 from . import __version__
@@ -14,6 +15,7 @@ from .git_backend import (
     ensure_private_repo,
     init_vault_repo_if_empty,
 )
+from .integrity import verify_snapshot
 from .paths import default_codex_home, home_dir
 from .restore import restore_snapshot
 from .scanner import resolve_codex_home, scan, selected_items, summarize
@@ -52,6 +54,20 @@ def build_parser() -> argparse.ArgumentParser:
     restore.add_argument("--snapshot", default=None)
     restore.add_argument("--apply", action="store_true", help="Actually copy files.")
     restore.add_argument("--codex-home", type=Path, default=None)
+    restore.add_argument(
+        "--allow-legacy-unhashed",
+        action="store_true",
+        help="Allow restore of legacy v1 snapshots without SHA-256 hashes.",
+    )
+
+    verify = sub.add_parser("verify", help="Verify snapshot paths, inventory, sizes, and hashes.")
+    verify.add_argument("--snapshot", default=None)
+    verify.add_argument("--json", action="store_true", help="Print machine-readable results.")
+    verify.add_argument(
+        "--require-hashes",
+        action="store_true",
+        help="Fail legacy snapshots that predate per-file SHA-256 hashes.",
+    )
 
     plugin = sub.add_parser("plugin", help="Codex plugin helpers.")
     plugin_sub = plugin.add_subparsers(dest="plugin_command", required=True)
@@ -88,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_pull(args)
         if args.command == "restore":
             return cmd_restore(args)
+        if args.command == "verify":
+            return cmd_verify(args)
         if args.command == "plugin":
             return cmd_plugin(args)
     except Exception as exc:  # noqa: BLE001 - CLI should show concise failures.
@@ -198,6 +216,7 @@ def cmd_restore(args: argparse.Namespace) -> int:
         snapshot=snapshot,
         codex_home=codex_home,
         apply=args.apply,
+        allow_legacy_unhashed=args.allow_legacy_unhashed,
     )
     mode = "Restored" if args.apply else "Dry-run restore"
     print(f"{mode} {len(planned)} files from {snapshot}.")
@@ -206,6 +225,27 @@ def cmd_restore(args: argparse.Namespace) -> int:
     if not args.apply:
         print("Pass --apply to copy files.")
     return 0
+
+
+def cmd_verify(args: argparse.Namespace) -> int:
+    config = load_config()
+    vault = ensure_clone(config)
+    snapshot = None if args.snapshot == "latest" else args.snapshot
+    snapshot = snapshot or latest_snapshot(vault)
+    if not snapshot:
+        raise RuntimeError("No snapshot available.")
+    result = verify_snapshot(vault, snapshot, require_hashes=args.require_hashes)
+    if args.json:
+        print(json.dumps(asdict(result), indent=2, sort_keys=True))
+    else:
+        status = "valid" if result.valid else "invalid"
+        protection = "SHA-256 protected" if result.integrity_protected else "legacy/unhashed"
+        print(f"Snapshot {snapshot}: {status} ({protection}, {result.verified_files} files).")
+        for warning in result.warnings:
+            print(f"Warning: {warning}")
+        for error in result.errors:
+            print(f"Error: {error}")
+    return 0 if result.valid else 1
 
 
 def cmd_plugin(args: argparse.Namespace) -> int:

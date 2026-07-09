@@ -5,6 +5,7 @@ import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 
+from .integrity import verify_snapshot
 from .rules import classify
 
 
@@ -14,7 +15,15 @@ def restore_snapshot(
     snapshot: str,
     codex_home: Path,
     apply: bool,
+    allow_legacy_unhashed: bool = False,
 ) -> list[str]:
+    verification = verify_snapshot(
+        vault_root,
+        snapshot,
+        require_hashes=not allow_legacy_unhashed,
+    )
+    if not verification.valid:
+        raise RuntimeError("Snapshot integrity check failed: " + "; ".join(verification.errors))
     snapshot_root = vault_root / "snapshots" / snapshot
     files_root = snapshot_root / "files"
     manifest_path = snapshot_root / "manifest.json"
